@@ -16,5 +16,5 @@ try:
     )
 except:
     print("ERROR: Can't connect to MySQL database.")
-    quit()
+    # quit()
 
