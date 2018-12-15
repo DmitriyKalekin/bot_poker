@@ -5,9 +5,13 @@ import random
 from api.config import cfg
 from api.connection import my_conn
 from api.utils import *
+from random import random
 
 
 app = Flask(__name__)
+bot = {
+
+}
 
 # --------------------------------------------------------- ADMIN ---------------------------------------------
 @app.route('/off', methods=['POST', 'GET'])
@@ -114,7 +118,7 @@ def register():
 
 @app.route('/play', methods=['POST', 'GET'])
 def play():
-    my_cur = my_conn.cursor()  
+    # my_cur = my_conn.cursor()  
     connection_token = request.args.get('connection_token', type = str)
 
     if not check_token(connection_token):
@@ -125,19 +129,100 @@ def play():
             "data": {
                 "connection_token": connection_token
             },
-        }), status    
+        }), status   
+
+    if connection_token not in  bot:
+        bot[connection_token] = {
+            "game_id": 123123,
+            "round": 0,
+            "started_balance": 100000,
+            "bet_size": 5,
+            "distribution": "134719123", 
+  
+            "player": {
+                    "name": "player",
+                    "current_balance": 1000,
+                    "cards": random(),
+                "status": {
+                    "code": 0,
+                    "description": "ready"
+                }                 
+            },
+            "opponent": {
+                "name": "bot8888",
+                "current_balance": 1000,
+                "cards": random(),
+                "status": {
+                    "code": 0,
+                    "description": "ready"
+                } 
+            }
+        }
 
 
 
-    my_cur.close()
+    # my_cur.close()
     status = 200
     return jsonify({
         "status": status,
         "error": {},
-        "data": {
-            "connection_token": connection_token
-        },
+        "data": bot[connection_token],
     }), status    
 
+
+@app.route('/play/move', methods=['POST', 'GET'])
+def play_move():
+    # my_cur = my_conn.cursor()  
+    connection_token = request.args.get('connection_token', type = str)
+    action = request.args.get('action', type = str)
+
+    if not check_token(connection_token):
+        status = 401
+        return jsonify({
+            "status": status,
+            "error": {"description": "Connection_token required. Use endpoint /register"},
+            "data": {
+                "connection_token": connection_token
+            },
+        }), status   
+    
+    if action not in ["fold", "bet"]:
+        status = 400
+        return jsonify({
+            "status": status,
+            "error": {"description": "Action must be fold/bet"},
+            "data": {},
+        }), status    
+
+    bot_action = "bet" if bot[connection_token]["opponent"]["cards"] > 0.75 else "fold"
+
+    if bot_action=="fold" and action=="fold":
+        bot[connection_token]["player"]["current_balance"] -= 1
+        bot[connection_token]["opponent"]["current_balance"] -= 1
+
+    if bot_action=="bet" and action=="fold":
+        bot[connection_token]["player"]["current_balance"] -= 1
+        bot[connection_token]["opponent"]["current_balance"] += 1        
+
+    if bot_action=="fold" and action=="bet":
+        bot[connection_token]["player"]["current_balance"] += 1
+        bot[connection_token]["opponent"]["current_balance"] -= 1      
+
+    if bot_action=="bet" and action=="bet":
+        if  bot[connection_token]["player"]["cards"] > bot[connection_token]["opponent"]["cards"]:
+            bot[connection_token]["player"]["current_balance"] += 6
+            bot[connection_token]["opponent"]["current_balance"] -= 6 
+        else:
+            bot[connection_token]["player"]["current_balance"] -= 6
+            bot[connection_token]["opponent"]["current_balance"] += 6 
+         
+
+    # my_cur.close()
+    status = 200
+    return jsonify({
+        "status": status,
+        "error": {},
+        "data": bot[connection_token],
+    }), status  
 
 
